@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  opendeepsearch-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      # Search provider API keys
+      - SERPER_API_KEY=${SERPER_API_KEY}
+      - SEARXNG_INSTANCE_URL=${SEARXNG_INSTANCE_URL}
+      - SEARXNG_API_KEY=${SEARXNG_API_KEY}
+      # LLM API keys - use one or more based on your preferences
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      # Reranker API keys
+      - JINA_API_KEY=${JINA_API_KEY}
+      # LiteLLM model settings
+      - LITELLM_MODEL_ID=${LITELLM_MODEL_ID:-openrouter/google/gemini-2.0-flash-001}
+      - LITELLM_SEARCH_MODEL_ID=${LITELLM_SEARCH_MODEL_ID:-openrouter/google/gemini-2.0-flash-001}
+    volumes:
+      - ./src:/app/src
+      - ./opendeepsearch_api.py:/app/opendeepsearch_api.py
+    restart: unless-stopped
+    networks:
+      - opendeepsearch-network
+
+  proxy-backend:
+    build:
+      context: .
+      dockerfile: proxy-backend.Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - ODS_API_URL=http://opendeepsearch-api:8000
+    depends_on:
+      - opendeepsearch-api
+    restart: unless-stopped
+    networks:
+      - opendeepsearch-network
+
+networks:
+  opendeepsearch-network:
+    driver: bridge 
